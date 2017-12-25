@@ -1,16 +1,94 @@
 #include <stdint.h>
 #include <common.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include <adi_processor.h>
 #include <drivers/pwr/adi_pwr.h>
 #include <drivers/gpio/adi_gpio.h>
-#include "dhry.h"
+
+/* Crypto Driver includes */
+#include <drivers/crypto/adi_crypto.h>
+
+/* pick up compiler-specific alignment directives */
+#include <drivers/general/adi_drivers_general.h>
 
 #define HZ 1000
-#define NUM_SYSTICKS (50u)
-#define TIMEOUT_VAL  (1000000u)
 
-#define RUN_NUMBER	300000
+/* Enable macro to build example in callback mode */
+#define CRYPTO_ENABLE_CALLBACK
+
+/* CRYPTO Device number */
+#define CRYPTO_DEV_NUM               (0u)
+
+/* SysTick Cycle Count Macros... max 24-bit measure (no wraparound handling) */
+#define CYCLES_INIT {                                                     \
+    /* enable with internal clock and no interrupts */                    \
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk; \
+    SysTick->LOAD = 0x00FFFFFF;}                                     /*!< SysTick instruction count macro */
+#define CYCLES_CLR     {SysTick->VAL = 0;}                           /*!< SysTick instruction count macro */
+#define CYCLES_GET     (0x00ffffff + 1 - SysTick->VAL)               /*!< SysTick instruction count macro */
+#define CYCLES_SUSPEND {SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;}  /*!< SysTick instruction count macro */
+#define CYCLES_RESUME  {SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;}   /*!< SysTick instruction count macro */
+
+
+/* Memory Required for crypto driver */
+static uint8_t DeviceMemory [ADI_CRYPTO_MEMORY_SIZE] __attribute__((aligned (4)));
+
+/* The SHA test vectors are from http://www.di-mgt.com.au/sha_testvectors.html */
+
+/* SHA test1 Buffers */
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha1_Message          [4] ADI_ALIGNED_ATTRIBUTE(4)= "abc" ;		
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha1_ComputedHash     [ADI_CRYPTO_SHA_HASH_BYTES] ADI_ALIGNED_ATTRIBUTE(4);
+ADI_ALIGNED_PRAGMA(4)
+static uint32_t Sha1_ExpectedHash    [] ADI_ALIGNED_ATTRIBUTE(4)= {
+    /* ba7816bf 8f01cfea 414140de 5dae2223 b00361a3 96177a9c b410ff61 f20015ad */
+    0xba7816bf, 0x8f01cfea, 0x414140de, 0x5dae2223,
+    0xb00361a3, 0x96177a9c, 0xb410ff61, 0xf20015ad
+} ;			
+
+/* SHA test2 Buffers */
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t  Sha2_Message         [56] ADI_ALIGNED_ATTRIBUTE(4)= "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" ;
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t  Sha2_ComputedHash    [ADI_CRYPTO_SHA_HASH_BYTES] ADI_ALIGNED_ATTRIBUTE(4);
+ADI_ALIGNED_PRAGMA(4)
+static uint32_t Sha2_ExpectedHash    [] ADI_ALIGNED_ATTRIBUTE(4)= {
+    /* 248d6a61 d20638b8 e5c02693 0c3e6039 a33ce459 64ff2167 f6ecedd4 19db06c1 */
+    0x248d6a61, 0xd20638b8, 0xe5c02693, 0x0c3e6039,
+    0xa33ce459, 0x64ff2167, 0xf6ecedd4, 0x19db06c1
+} ;
+
+/* SHA test3 Buffers */
+/* note: this vector checks 64-byte AES driver chunking (hardware only takes 512 bits at a time) */
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha3_Message          [112] ADI_ALIGNED_ATTRIBUTE(4)= "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu" ;
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha3_ComputedHash     [ADI_CRYPTO_SHA_HASH_BYTES] ADI_ALIGNED_ATTRIBUTE(4);
+ADI_ALIGNED_PRAGMA(4)
+static uint32_t Sha3_ExpectedHash    [] ADI_ALIGNED_ATTRIBUTE(4)= {
+    /* "cf5b16a7 78af8380 036ce59e 7b049237 0b249b11 e8f07a51 afac4503 7afee9d1" */
+    0xcf5b16a7, 0x78af8380, 0x036ce59e, 0x7b049237,
+    0x0b249b11, 0xe8f07a51, 0xafac4503, 0x7afee9d1
+} ;
+
+#ifdef CRYPTO_ENABLE_CALLBACK
+static volatile int numBuffersReturned = 0;
+#endif
+
+#if defined (__ADUCM302x__)
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha1_FormattedMessage[4] ADI_ALIGNED_ATTRIBUTE(4);
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha2_FormattedMessage[56] ADI_ALIGNED_ATTRIBUTE(4);
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t Sha3_FormattedMessage[112] ADI_ALIGNED_ATTRIBUTE(4);
+#endif
+
 
 volatile static uint32_t g_Ticks;
 
@@ -31,169 +109,343 @@ PinMap LDS3 = {ADI_GPIO_PORT2, ADI_GPIO_PIN_0};   /* Green LED on GPIO32 (DS3) *
 extern uint32_t SystemCoreClock;
 
 
-/* Global Variables: */
+/*=============  L O C A L    F U N C T I O N S  =============*/
 
-Rec_Pointer     Ptr_Glob,
-                Next_Ptr_Glob;
-int             Int_Glob;
-Boolean         Bool_Glob;
-char            Ch_1_Glob,
-                Ch_2_Glob;
-int             Arr_1_Glob [50];
-int             Arr_2_Glob [50] [50];
+//static void InitBuffers(void);
+static bool VerifyBuffers (void);
 
-#define REG	register
-	
-#ifndef REG
-        Boolean Reg = false;
-#define REG
-        /* REG becomes defined as empty */
-        /* i.e. no register variables   */
-#else
-        Boolean Reg = true;
-#endif
+/*=============  C O D E  =============*/
 
-/* variables for time measurement: */
+/* IF (Callback mode enabled) */
+#ifdef CRYPTO_ENABLE_CALLBACK
 
-#ifdef TIMES
-struct tms      time_info;
-extern  int     times (void);
-                /* see library function "times" */
-#define Too_Small_Time (2*HZ)
-                /* Measurements should last at least about 2 seconds */
-#endif
-#ifdef TIME
-extern long     time(long *);
-                /* see library function "time"  */
-#define Too_Small_Time 2
-                /* Measurements should last at least 2 seconds */
-#endif
-#ifdef MSC_CLOCK
-//extern clock_t clock(void);
-#define Too_Small_Time (2*HZ)
-#endif
+ADI_CRYPTO_TRANSACTION *pcbReturnedBuffer;
 
-long            Begin_Time,
-                End_Time,
-                User_Time;
-float           Microseconds,
-                Dhrystones_Per_Second;
-
-/* end of variables for time measurement */
-
-
-void Proc_1 (Rec_Pointer Ptr_Val_Par)
-/******************/
-    /* executed once */
+/* Callback from the device */
+static void CryptoCallback(void *pCBParam, uint32_t Event, void *pArg)
 {
-  REG Rec_Pointer Next_Record = Ptr_Val_Par->Ptr_Comp;
-                                        /* == Ptr_Glob_Next */
-  /* Local variable, initialized with Ptr_Val_Par->Ptr_Comp,    */
-  /* corresponds to "rename" in Ada, "with" in Pascal           */
+    /* process callback event */
+    switch (Event) {
 
-  structassign (*Ptr_Val_Par->Ptr_Comp, *Ptr_Glob);
-  Ptr_Val_Par->variant.var_1.Int_Comp = 5;
-  Next_Record->variant.var_1.Int_Comp = Ptr_Val_Par->variant.var_1.Int_Comp;
-  Next_Record->Ptr_Comp = Ptr_Val_Par->Ptr_Comp;
-  Proc_3 (&Next_Record->Ptr_Comp);
-    /* Ptr_Val_Par->Ptr_Comp->Ptr_Comp == Ptr_Glob->Ptr_Comp */
-  if (Next_Record->Discr == Ident_1)
-    /* then, executed */
-  {
-    Next_Record->variant.var_1.Int_Comp = 6;
-    Proc_6 (Ptr_Val_Par->variant.var_1.Enum_Comp,
-           &Next_Record->variant.var_1.Enum_Comp);
-    Next_Record->Ptr_Comp = Ptr_Glob->Ptr_Comp;
-    Proc_7 (Next_Record->variant.var_1.Int_Comp, 10,
-           &Next_Record->variant.var_1.Int_Comp);
-  }
-  else /* not executed */
-    structassign (*Ptr_Val_Par, *Ptr_Val_Par->Ptr_Comp);
-} /* Proc_1 */
+        /* success events */
+        case ADI_CRYPTO_EVENT_STATUS_CBC_DONE:
+        case ADI_CRYPTO_EVENT_STATUS_CCM_DONE:
+        case ADI_CRYPTO_EVENT_STATUS_CMAC_DONE:
+        case ADI_CRYPTO_EVENT_STATUS_CTR_DONE:
+        case ADI_CRYPTO_EVENT_STATUS_ECB_DONE:
+#if defined (__ADUCM4x50__)        
+        case ADI_CRYPTO_EVENT_STATUS_HMAC_DONE:
+#endif /*__ADUCM4x50__*/          
+        case ADI_CRYPTO_EVENT_STATUS_SHA_DONE:
+            pcbReturnedBuffer = pArg;
+            numBuffersReturned++;
+            break;
 
+        /* other events */
+        case ADI_CRYPTO_EVENT_DMA_BUS_ERROR:
+        case ADI_CRYPTO_EVENT_DMA_DESCRIPTOR_ERROR:
+        case ADI_CRYPTO_EVENT_DMA_UNKNOWN_ERROR:
+        case ADI_CRYPTO_EVENT_STATUS_INPUT_OVERFLOW:
+        case ADI_CRYPTO_EVENT_STATUS_UNKNOWN:
+            printf("Non-success callback event 0x%04lx\n", Event);
+            //exit(0);
+            break;
 
-void Proc_2 (One_Fifty *Int_Par_Ref)
-/******************/
-    /* executed once */
-    /* *Int_Par_Ref == 1, becomes 4 */
-{
-  One_Fifty  Int_Loc;
-  Enumeration   Enum_Loc;
-
-  Int_Loc = *Int_Par_Ref + 10;
-  do /* executed once */
-    if (Ch_1_Glob == 'A')
-      /* then, executed */
-    {
-      Int_Loc -= 1;
-      *Int_Par_Ref = Int_Loc - Int_Glob;
-      Enum_Loc = Ident_1;
-    } /* if */
-    while (Enum_Loc != Ident_1); /* true */
-} /* Proc_2 */
-
-
-void Proc_3 (Rec_Pointer *Ptr_Ref_Par)
-/******************/
-    /* executed once */
-    /* Ptr_Ref_Par becomes Ptr_Glob */
-{
-  if (Ptr_Glob != Null)
-    /* then, executed */
-    *Ptr_Ref_Par = Ptr_Glob->Ptr_Comp;
-  Proc_7 (10, Int_Glob, &Ptr_Glob->variant.var_1.Int_Comp);
-} /* Proc_3 */
-
-
-void Proc_4 (void) /* without parameters */
-/*******/
-    /* executed once */
-{
-  Boolean Bool_Loc;
-
-  Bool_Loc = Ch_1_Glob == 'A';
-  Bool_Glob = Bool_Loc | Bool_Glob;
-  Ch_2_Glob = 'B';
-} /* Proc_4 */
-
-
-void Proc_5 (void) /* without parameters */
-/*******/
-    /* executed once */
-{
-  Ch_1_Glob = 'A';
-  Bool_Glob = false;
-} /* Proc_5 */
-
-
-        /* Procedure for the assignment of structures,          */
-        /* if the C compiler doesn't support this feature       */
-#ifdef  NOSTRUCTASSIGN
-memcpy (d, s, l)
-register char   *d;
-register char   *s;
-register int    l;
-{
-        while (l--) *d++ = *s++;
+        /* UNDEFINED */
+        default:
+            printf("Undefined callback event\n");
+            //exit(0);
+            break;
+        }
 }
+#else
+static ADI_CRYPTO_TRANSACTION *pGottenBuffer;
+#endif /* CRYPTO_ENABLE_CALLBACK */
+
+/* The SHA module in Crypto Block in ADUCM302x silicon 1.0 takes input directly from 
+   the bus and hence byte swapping requirement cannot be satisfied. For examples if the
+   input buffer is {0x61, 0x62, 0x63, 0x64}, the register write to the FIFO should be 0x61626364 
+   but when the DMA/Core reads the buffer, it reads as 0x64636261 and if this is written to the
+   crypto block for SHA computation, the SHA will be wrong. Since SHA takes data directly from 
+   the bus, the byte swapping cannot be done in the crypto module. The byte swapping can be done
+   in the core but DMA due to  DMA controller limitation, does not support byte swapping
+   when writing into the FIFO. 
+
+   Because of this limitation, the application must perform the byte swapping on the data at each 32-bit boundary before feeding the 
+   buffer to the driver. So if your input data is {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48}
+   then the application has to format the data as {0x44, 0x43, 0x42, 0x41, 0x48, 0x47, 0x46, 0x45}.
+   If the input data is {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47} (not a multiple of 32-bit) then
+   the application has to format it as {0x44, 0x43, 0x42, 0x41, 0x00, 0x47, 0x46, 0x45}. We have provided 
+   an example function SHA_FormatInput which can do byte swapping for the application. 
+   (Note:The byte swapped data can also be fed to AES algorithm with endian changed)
+   
+   Note:
+   For ADUCM4x50,Input data and output data byte swapping is supported using AES_BYTESWAP and SHA_BYTESWAP configuration bits.
+*/
+
+#if defined (__ADUCM302x__)
+void SHA_FormatInput (
+                      void*     pBuffer,                     /* Pointer to the real buffer */
+                      uint32_t  nBufferSizeInBits,           /* Size of buffer in bits */
+                      void*     pBufferFormatted,            /* Pointer to the formatted buffers */
+                      uint32_t  nBufferFormattedSizeInBits   /* Formatted Buffer Size should be a multiple of 32-bits
+                                                                and should be at least equal to nBufferSizeInBits rounded up the nearest
+                                                                multiple of 32-bit */
+                      ) 
+{
+    int x;
+    
+    /* Assert that buffers are 32-bit aligned */
+    assert ((((uint32_t)pBuffer & 0x00000003) == 0u) && (((uint32_t)pBufferFormatted & 0x00000003) == 0u));
+    /* Assert that the size is correct */
+    assert (   (nBufferSizeInBits > 0u) 
+            && (nBufferFormattedSizeInBits >= (((nBufferSizeInBits+31)/32)*32))
+            );
+    
+    uint32_t* pBuffer32    = (uint32_t*)pBuffer;
+    uint32_t* pBufferFmt32 = (uint32_t*)pBufferFormatted;
+    uint32_t  nNumWords    = (nBufferSizeInBits+31)/32;
+    uint32_t  nValue;
+    
+    /* Byte swap all words but the last one */
+    for (x = 0; x < (nNumWords - 1); x++) {
+       /* Read to variable is to support inplace change */
+       nValue = __REV(*pBuffer32++);
+       *pBufferFmt32++ = nValue;
+    }
+    
+    /* Process the last word */
+    {
+        uint32_t nNumValidBitsInLastWord = nBufferSizeInBits - (nNumWords - 1)*32;
+        nValue = (*pBuffer32++ & (0xFFFFFFFFu >> (32-nNumValidBitsInLastWord)));
+        *pBufferFmt32++ = __REV(nValue);
+    }
+}
+
 #endif
 
+void SHA_Compute(void)
+{
+    ADI_CRYPTO_HANDLE hDevice;
+    ADI_CRYPTO_RESULT eResult = ADI_CRYPTO_SUCCESS;
+    ADI_CRYPTO_TRANSACTION Buffer1;
+    ADI_CRYPTO_TRANSACTION Buffer2;
+    ADI_CRYPTO_TRANSACTION Buffer3;
+
+    /* Open the crypto device */
+    eResult = adi_crypto_Open(CRYPTO_DEV_NUM, DeviceMemory, sizeof(DeviceMemory), &hDevice);
+    DEBUG_RESULT("Failed to open crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifdef CRYPTO_ENABLE_CALLBACK
+    /* Register Callback */
+    eResult = adi_crypto_RegisterCallback (hDevice, CryptoCallback, NULL);
+#endif
+
+
+
+#if defined (__ADUCM302x__)
+    /* Format SHA message 1 */
+    SHA_FormatInput(
+                    Sha1_Message , 
+                    sizeof(Sha1_Message)*8u,
+                    Sha1_FormattedMessage, 
+                    sizeof(Sha1_FormattedMessage)*8u
+                    );
+    
+    /* Format SHA message 2 */
+    SHA_FormatInput(
+                    Sha2_Message , 
+                    sizeof(Sha2_Message)*8u,
+                    Sha2_FormattedMessage, 
+                    sizeof(Sha2_FormattedMessage)*8u
+                    );
+    
+    /* Format SHA message 3 */
+    SHA_FormatInput(
+                    Sha3_Message , 
+                    sizeof(Sha3_Message)*8u,
+                    Sha3_FormattedMessage, 
+                    sizeof(Sha3_FormattedMessage)*8u
+                    );
+#endif    
+    
+    /****************************************BUFFER1****************************************/
+    /* prepair submit */
+    memset( &Buffer1, 0, sizeof(ADI_CRYPTO_TRANSACTION) );
+
+    Buffer1.eCipherMode    = ADI_CRYPTO_MODE_SHA;
+    Buffer1.eCodingMode    = ADI_CRYPTO_ENCODE;
+#if defined (__ADUCM302x__)
+    Buffer1.pInputData     = (uint32_t*)& Sha1_FormattedMessage[0];
+#elif defined (__ADUCM4x50__)
+    Buffer1.eShaByteSwap   = ADI_CRYPTO_SHA_BIG_ENDIAN;    
+    Buffer1.pInputData     = (uint32_t*)&Sha1_Message[0];
+#else
+#error The example is not ported to this processor
+#endif
+    
+    Buffer1.numInputBytes  = sizeof( Sha1_Message);
+    Buffer1.numShaBits     = (strlen((const char *) Sha1_Message)*8);
+    Buffer1.pOutputData    = (uint32_t*)&Sha1_ComputedHash[0];
+    Buffer1.numOutputBytes = ADI_CRYPTO_SHA_HASH_BYTES;
+
+    /* Submit the buffer for SHA hashing */
+    eResult = adi_crypto_SubmitBuffer (hDevice, &Buffer1);
+    DEBUG_RESULT("Failed to submit SHA buffer 1 to crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifdef CRYPTO_ENABLE_CALLBACK
+    /* reset callback counter */
+    numBuffersReturned = 0;
+#endif
+
+    /* Enable the device */
+    eResult =  adi_crypto_Enable (hDevice, true);
+    DEBUG_RESULT("Failed to enable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifndef CRYPTO_ENABLE_CALLBACK
+    /* retrieve the submitted buffer from the driver */
+    eResult =  adi_crypto_GetBuffer (hDevice, &pGottenBuffer);
+    DEBUG_RESULT("Failed to get buffer from the crypto device", eResult, ADI_CRYPTO_SUCCESS);
+    if (&Buffer1 != pGottenBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#else
+    /* await the callback */
+    while (0 == numBuffersReturned)
+        ;
+    if (&Buffer1 != pcbReturnedBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#endif
+
+    /* Disable the device */
+    eResult =  adi_crypto_Enable (hDevice, false);
+    DEBUG_RESULT("Failed to disable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+
+/****************************************BUFFER2****************************************/
+
+    /* prepare submit */
+    memset( &Buffer2, 0, sizeof(ADI_CRYPTO_TRANSACTION) );
+
+    Buffer2.eCipherMode    = ADI_CRYPTO_MODE_SHA;
+    Buffer2.eCodingMode    = ADI_CRYPTO_ENCODE;
+#if defined (__ADUCM302x__)
+    Buffer2.pInputData     = (uint32_t*)&Sha2_FormattedMessage[0];
+#elif defined (__ADUCM4x50__)   
+    Buffer2.eShaByteSwap   = ADI_CRYPTO_SHA_BIG_ENDIAN;
+    Buffer2.pInputData     = (uint32_t*)&Sha2_Message[0];
+#else
+#error The example is not ported to this processor
+#endif
+
+    Buffer2.numInputBytes  = sizeof(Sha2_Message);
+    Buffer2.numShaBits     = sizeof(Sha2_Message)*8u;
+    Buffer2.pOutputData    = (uint32_t*)&Sha2_ComputedHash[0];
+    Buffer2.numOutputBytes = ADI_CRYPTO_SHA_HASH_BYTES;
+
+    /* Submit the buffer for SHA hashing */
+    eResult = adi_crypto_SubmitBuffer (hDevice, &Buffer2);
+    DEBUG_RESULT("Failed to submit SHA buffer 2 to crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifdef CRYPTO_ENABLE_CALLBACK
+    /* reset callback counter */
+    numBuffersReturned = 0;
+#endif
+
+    /* Enable the device */
+    eResult =  adi_crypto_Enable (hDevice, true);
+    DEBUG_RESULT("Failed to enable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifndef CRYPTO_ENABLE_CALLBACK
+    /* retrieve the submitted buffer from the driver */
+    eResult =  adi_crypto_GetBuffer (hDevice, &pGottenBuffer);
+    DEBUG_RESULT("Failed to get buffer from the crypto device", eResult, ADI_CRYPTO_SUCCESS);
+    if (&Buffer2 != pGottenBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#else
+    /* await the callback */
+    while (0 == numBuffersReturned)
+        ;
+    if (&Buffer2 != pcbReturnedBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#endif
+
+    /* Disable the device */
+    eResult =  adi_crypto_Enable (hDevice, false);
+    DEBUG_RESULT("Failed to disable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+
+/****************************************BUFFER3****************************************/
+
+    /* prepare submit */
+    memset( &Buffer3, 0, sizeof(ADI_CRYPTO_TRANSACTION) );
+
+    Buffer3.eCipherMode    = ADI_CRYPTO_MODE_SHA;
+    Buffer3.eCodingMode    = ADI_CRYPTO_ENCODE;
+#if defined (__ADUCM302x__)
+    Buffer3.pInputData     = (uint32_t*)& Sha3_FormattedMessage[0];
+  
+#elif defined (__ADUCM4x50__)    
+    Buffer3.eShaByteSwap   = ADI_CRYPTO_SHA_BIG_ENDIAN;
+    Buffer3.pInputData     = (uint32_t*)&Sha3_Message[0];
+#else
+#error The example is not ported to this processor
+#endif
+    
+    Buffer3.numInputBytes  = sizeof(Sha3_Message);
+    Buffer3.numShaBits     = sizeof(Sha3_Message)*8u;
+    Buffer3.pOutputData    = (uint32_t*)&Sha3_ComputedHash[0];
+    Buffer3.numOutputBytes = ADI_CRYPTO_SHA_HASH_BYTES;
+
+    /* Submit the buffer for SHA hashing */
+    eResult = adi_crypto_SubmitBuffer (hDevice, &Buffer3);
+    DEBUG_RESULT("Failed to submit SHA buffer 2 to crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifdef CRYPTO_ENABLE_CALLBACK
+    /* reset callback counter */
+    numBuffersReturned = 0;
+#endif
+
+    /* Enable the device */
+    eResult =  adi_crypto_Enable (hDevice, true);
+    DEBUG_RESULT("Failed to enable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+#ifndef CRYPTO_ENABLE_CALLBACK
+    /* retrieve the submitted buffer from the driver */
+    eResult =  adi_crypto_GetBuffer (hDevice, &pGottenBuffer);
+    DEBUG_RESULT("Failed to get buffer from the crypto device", eResult, ADI_CRYPTO_SUCCESS);
+    if (&Buffer3 != pGottenBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#else
+    /* await the callback */
+    while (0 == numBuffersReturned)
+        ;
+    if (&Buffer3 != pcbReturnedBuffer) {
+        DEBUG_RESULT("Returned buffer from callback mismatch", eResult, ADI_CRYPTO_ERR_BAD_BUFFER);
+    }
+#endif
+
+    /* Disable the device */
+    eResult =  adi_crypto_Enable (hDevice, false);
+    DEBUG_RESULT("Failed to disable crypto device", eResult, ADI_CRYPTO_SUCCESS);
+
+
+/***************************************************************************************/
+
+    /* Close the crypto device */
+    eResult =  adi_crypto_Close(hDevice);
+    DEBUG_RESULT("Failed to close crypto device", eResult, ADI_CRYPTO_SUCCESS);
+}
 
 int main(void)
 {
 	uint8_t         gpioMemory[ADI_GPIO_MEMORY_SIZE] = {0};
 	ADI_PWR_RESULT  ePwrResult;
 	ADI_GPIO_RESULT eGpioResult;
-	
- One_Fifty       Int_1_Loc;
-  REG One_Fifty   Int_2_Loc;
-  One_Fifty       Int_3_Loc;
-  REG char        Ch_Index;
-  Enumeration     Enum_Loc;
-  Str_30          Str_1_Loc;
-  Str_30          Str_2_Loc;
-  REG int         Run_Index;
-  REG int         Number_Of_Runs;
 	
 	ePwrResult = adi_pwr_Init();
 
@@ -216,243 +468,17 @@ int main(void)
   /* Configure SysTick */
   SysTick_Config(SystemCoreClock/HZ);
 	
-	printf("ADICUP3029 Dhrystone Demo by zhanzr21 for 21ic BBS @ %u Hz\n", SystemCoreClock);
-
-/* Initializations */
-  Next_Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
-  Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
-
-  Ptr_Glob->Ptr_Comp                    = Next_Ptr_Glob;
-  Ptr_Glob->Discr                       = Ident_1;
-  Ptr_Glob->variant.var_1.Enum_Comp     = Ident_3;
-  Ptr_Glob->variant.var_1.Int_Comp      = 40;
-  strcpy (Ptr_Glob->variant.var_1.Str_Comp,
-          "DHRYSTONE PROGRAM, SOME STRING");
-  strcpy (Str_1_Loc, "DHRYSTONE PROGRAM, 1'ST STRING");
-
-  Arr_2_Glob [8][7] = 10;
-        /* Was missing in published program. Without this statement,    */
-        /* Arr_2_Glob [8][7] would have an undefined value.             */
-        /* Warning: With 16-Bit processors and Number_Of_Runs > 32000,  */
-        /* overflow may occur for this array element.                   */
-
-  printf ("\n");
-  printf ("Dhrystone Benchmark, Version 2.1 (Language: C)\n");
-  printf ("\n");
+	printf("ADICUP3029 SHA Demo by zhanzr21 for 21ic BBS @ %u Hz\n", SystemCoreClock);
 	
-  if (Reg)
-  {
-    printf ("Program compiled with 'register' attribute\n");
-    printf ("\n");
-  }
-  else
-  {
-    printf ("Program compiled without 'register' attribute\n");
-    printf ("\n");
-  }
-  printf ("Please give the number of runs through the benchmark: ");
-  {
-//    int n = 100000;
-//    scanf ("%d", &n);
-    Number_Of_Runs = RUN_NUMBER;
-  }
-  printf ("\n");
+/* SHA */
+    SHA_Compute();
 
-  printf( "Execution starts, %d runs through Dhrystone\n", Number_Of_Runs);
-  /***************/
-  /* Start timer */
-  /***************/
-
-#ifdef TIMES
-  times (&time_info);
-  Begin_Time = (long) time_info.tms_utime;
-#endif
-#ifdef TIME
-  Begin_Time = time ( (long *) 0);
-#endif
-#ifdef MSC_CLOCK
-  Begin_Time = g_Ticks;
-#endif
-
-  for (Run_Index = 1; Run_Index <= Number_Of_Runs; ++Run_Index)
-  {
-
-    Proc_5();
-    Proc_4();
-      /* Ch_1_Glob == 'A', Ch_2_Glob == 'B', Bool_Glob == true */
-    Int_1_Loc = 2;
-    Int_2_Loc = 3;
-    strcpy (Str_2_Loc, "DHRYSTONE PROGRAM, 2'ND STRING");
-    Enum_Loc = Ident_2;
-    Bool_Glob = ! Func_2 (Str_1_Loc, Str_2_Loc);
-      /* Bool_Glob == 1 */
-    while (Int_1_Loc < Int_2_Loc)  /* loop body executed once */
+    /* Verify the transfer */
+    if (VerifyBuffers())
     {
-      Int_3_Loc = 5 * Int_1_Loc - Int_2_Loc;
-        /* Int_3_Loc == 7 */
-      Proc_7 (Int_1_Loc, Int_2_Loc, &Int_3_Loc);
-        /* Int_3_Loc == 7 */
-      Int_1_Loc += 1;
-    } /* while */
-      /* Int_1_Loc == 3, Int_2_Loc == 3, Int_3_Loc == 7 */
-    Proc_8 (Arr_1_Glob, Arr_2_Glob, Int_1_Loc, Int_3_Loc);
-      /* Int_Glob == 5 */
-    Proc_1 (Ptr_Glob);
-    for (Ch_Index = 'A'; Ch_Index <= Ch_2_Glob; ++Ch_Index)
-                             /* loop body executed twice */
-    {
-      if (Enum_Loc == Func_1 (Ch_Index, 'C'))
-         /* then, not executed */
-      {
-        Proc_6 (Ident_1, &Enum_Loc);
-        strcpy (Str_2_Loc, "DHRYSTONE PROGRAM, 3'RD STRING");
-        Int_2_Loc = Run_Index;
-        Int_Glob = Run_Index;
-      }
+        printf("All done! Crypto example completed successfully");
     }
-      /* Int_1_Loc == 3, Int_2_Loc == 3, Int_3_Loc == 7 */
-    Int_2_Loc = Int_2_Loc * Int_1_Loc;
-    Int_1_Loc = Int_2_Loc / Int_3_Loc;
-    Int_2_Loc = 7 * (Int_2_Loc - Int_3_Loc) - Int_1_Loc;
-      /* Int_1_Loc == 1, Int_2_Loc == 13, Int_3_Loc == 7 */
-    Proc_2 (&Int_1_Loc);
-      /* Int_1_Loc == 5 */
-
-  } /* loop "for Run_Index" */
-
-  /**************/
-  /* Stop timer */
-  /**************/
-
-#ifdef TIMES
-  times (&time_info);
-  End_Time = (long) time_info.tms_utime;
-#endif
-#ifdef TIME
-  End_Time = time ( (long *) 0);
-#endif
-#ifdef MSC_CLOCK
-  End_Time = g_Ticks;
-#endif
-
-  printf ("Execution ends\n");
-  printf ("\n");
-  printf ("Final values of the variables used in the benchmark:\n");
-  printf ("\n");
-  printf( "Int_Glob:            %d\n", Int_Glob);
-  printf("        should be:   %d\n", 5);
-  printf( "Bool_Glob:           %d\n", Bool_Glob);
-	
-  printf( "        should be:   %d\n", 1);
-	
-  printf("Ch_1_Glob:           %c\n", Ch_1_Glob);
-	
-  printf("        should be:   %c\n", 'A');
-	
-  printf("Ch_2_Glob:           %c\n", Ch_2_Glob);
-	
-  printf("        should be:   %c\n", 'B');
-	
-  printf("Arr_1_Glob[8]:       %d\n", Arr_1_Glob[8]);
-	
-  printf("        should be:   %d\n", 7);
-	
-  printf("Arr_2_Glob[8][7]:    %d\n", Arr_2_Glob[8][7]);
-	
-  printf ("        should be:   Number_Of_Runs + 10\n");
-  printf ("Ptr_Glob->\n");
-  printf("  Ptr_Comp:          %d\n", (int) Ptr_Glob->Ptr_Comp);
-	
-  printf ("        should be:   (implementation-dependent)\n");
-  printf("  Discr:             %d\n", Ptr_Glob->Discr);
-	
- printf("        should be:   %d\n", 0);
-	
-  printf("  Enum_Comp:         %d\n", Ptr_Glob->variant.var_1.Enum_Comp);
-	
- printf("        should be:   %d\n", 2);
-	
-  printf("  Int_Comp:          %d\n", Ptr_Glob->variant.var_1.Int_Comp);
-	
-  printf("        should be:   %d\n", 17);
-	
-  printf("  Str_Comp:          %s\n", Ptr_Glob->variant.var_1.Str_Comp);
-	
-  printf ("        should be:   DHRYSTONE PROGRAM, SOME STRING\n");
-  printf ("Next_Ptr_Glob->\n");
-  printf("  Ptr_Comp:          %d\n", (int) Next_Ptr_Glob->Ptr_Comp);
-	
-  printf ("        should be:   (implementation-dependent), same as above\n");
- printf("  Discr:             %d\n", Next_Ptr_Glob->Discr);
-	
-  printf("        should be:   %d\n", 0);
-	
-  printf("  Enum_Comp:         %d\n", Next_Ptr_Glob->variant.var_1.Enum_Comp);
-	
-  printf("        should be:   %d\n", 1);
-	
-  printf("  Int_Comp:          %d\n", Next_Ptr_Glob->variant.var_1.Int_Comp);
-	
-  printf("        should be:   %d\n", 18);
-	
-  printf("  Str_Comp:          %s\n",
-                                Next_Ptr_Glob->variant.var_1.Str_Comp);
-	
-  printf ("        should be:   DHRYSTONE PROGRAM, SOME STRING\n");
-  printf("Int_1_Loc:           %d\n", Int_1_Loc);
-	
-  printf("        should be:   %d\n", 5);
-	
-  printf("Int_2_Loc:           %d\n", Int_2_Loc);
-	
-  printf("        should be:   %d\n", 13);
-	
-  printf("Int_3_Loc:           %d\n", Int_3_Loc);
-	
-  printf("        should be:   %d\n", 7);
-	
-  printf("Enum_Loc:            %d\n", Enum_Loc);
-	
-  printf("        should be:   %d\n", 1);
-	
-  printf("Str_1_Loc:           %s\n", Str_1_Loc);
-	
-  printf ("        should be:   DHRYSTONE PROGRAM, 1'ST STRING\n");
-  printf("Str_2_Loc:           %s\n", Str_2_Loc);
-	
-  printf ("        should be:   DHRYSTONE PROGRAM, 2'ND STRING\n");
-  printf ("\n");
-
-  User_Time = End_Time - Begin_Time;
-
-  if (User_Time < Too_Small_Time)
-  {
-		printf( "Measured time too small to obtain meaningful results %u-%u\n", Begin_Time, End_Time);
-    printf ("Please increase number of runs\n");
-  }
-  else
-  {
-#ifdef TIME
-    Microseconds = (float) User_Time * Mic_secs_Per_Second
-                        / (float) Number_Of_Runs;
-    Dhrystones_Per_Second = (float) Number_Of_Runs / (float) User_Time;
-#else
-    Microseconds = (float) User_Time * (float)Mic_secs_Per_Second
-                        / ((float) HZ * ((float) Number_Of_Runs));
-    Dhrystones_Per_Second = ((float) HZ * (float) Number_Of_Runs)
-                        / (float) User_Time;
-#endif
-		printf("Microseconds for one run through Dhrystone[%u-%u]:  ", Begin_Time, End_Time);
-
-    printf("%6.1f \n", Microseconds);
-	
-    printf ("Dhrystones per Second:                      ");
-    printf("%6.1f \n", Dhrystones_Per_Second);
-	
-  }
 		
-	printf("End @ %u \n", SystemCoreClock);
-	
 	/* Loop indefinitely */
 	while (1)  
 	{
@@ -480,3 +506,33 @@ int main(void)
 	return 0;
 }
 	
+
+static bool VerifyBuffers (void)
+{
+    int hashIndex;
+
+    /* Verify SHA results */
+    uint8_t expectedByte;  /* unpack bytes from 32-bit words */
+    for (hashIndex = 0; hashIndex < ADI_CRYPTO_SHA_HASH_BYTES; hashIndex++) {
+
+        expectedByte = Sha1_ExpectedHash[hashIndex/4] >> (24 - ((hashIndex%4)*8));
+        if (Sha1_ComputedHash[hashIndex] != expectedByte) {
+            DEBUG_MESSAGE("SHA hash1 mismatch at index %d\n", hashIndex);
+            return false;
+        }
+
+        expectedByte = Sha2_ExpectedHash[hashIndex/4] >> (24 - ((hashIndex%4)*8));
+        if (Sha2_ComputedHash[hashIndex] != expectedByte) {
+            DEBUG_MESSAGE("SHA hash2 mismatch at index %d\n", hashIndex);
+            return false;
+        }
+
+        expectedByte = Sha3_ExpectedHash[hashIndex/4] >> (24 - ((hashIndex%4)*8));
+        if (Sha3_ComputedHash[hashIndex] != expectedByte) {
+            DEBUG_MESSAGE("SHA hash3 mismatch at index %d\n", hashIndex);
+            return false;
+        }
+    }
+
+    return true;
+}
