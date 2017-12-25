@@ -7,7 +7,7 @@
 
   <Targets>
     <Target>
-      <TargetName>Target 1</TargetName>
+      <TargetName>simple</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pCCUsed>5060422::V5.06 update 4 (build 422)::ARMCC</pCCUsed>
@@ -310,8 +310,8 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
-            <oTime>0</oTime>
+            <Optim>4</Optim>
+            <oTime>1</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
             <Strict>0</Strict>
@@ -377,7 +377,7 @@
       </TargetOption>
       <Groups>
         <Group>
-          <GroupName>Source Group 1</GroupName>
+          <GroupName>Source</GroupName>
           <Files>
             <File>
               <FileName>main.c</FileName>
@@ -405,127 +405,127 @@
       <component Cclass="CMSIS" Cgroup="CORE" Cvendor="ARM" Cversion="5.0.2" condition="ARMv6_7_8-M Device">
         <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="5.1.1"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="ADC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x ADC">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="CRC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="Crypto" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Crypto">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="DMA" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="GPIO" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="Interrupt" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="Power" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="RNG" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="RTC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="SPI" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x SPI">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="UART" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x UART">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Drivers" Csub="WDT" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Examples Support" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Examples Support">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Global Configuration" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Retarget_UART" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x CompilerIO">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cclass="Device" Cgroup="Startup" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver">
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cbundle="ARM Compiler" Cclass="Compiler" Cgroup="I/O" Csub="STDERR" Cvariant="User" Cvendor="Keil" Cversion="1.2.1" condition="ARMCC Cortex-M">
         <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.3"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cbundle="ARM Compiler" Cclass="Compiler" Cgroup="I/O" Csub="STDIN" Cvariant="User" Cvendor="Keil" Cversion="1.2.1" condition="ARMCC Cortex-M">
         <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.3"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cbundle="ARM Compiler" Cclass="Compiler" Cgroup="I/O" Csub="STDOUT" Cvariant="User" Cvendor="Keil" Cversion="1.2.1" condition="ARMCC Cortex-M">
         <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.3"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
       <component Cbundle="ARM Compiler" Cclass="Compiler" Cgroup="I/O" Csub="TTY" Cvariant="User" Cvendor="Keil" Cversion="1.2.1" condition="ARMCC Cortex-M">
         <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.3"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </component>
     </components>
@@ -535,7 +535,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="ADC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x ADC"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_crc_config.h" version="2.0.0">
@@ -543,7 +543,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="CRC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_crypto_config.h" version="2.0.0">
@@ -551,7 +551,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="Crypto" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Crypto"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_cycle_counting_config.h" version="2.0.0">
@@ -559,7 +559,7 @@
         <component Cclass="Device" Cgroup="Global Configuration" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_global_config.h" version="2.0.0">
@@ -567,7 +567,7 @@
         <component Cclass="Device" Cgroup="Global Configuration" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_pwr_config.h" version="2.0.0">
@@ -575,7 +575,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="Power" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_rng_config.h" version="2.0.0">
@@ -583,7 +583,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="RNG" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_rtc_config.h" version="2.0.0">
@@ -591,7 +591,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="RTC" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_spi_config.h" version="2.0.0">
@@ -599,7 +599,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="SPI" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x SPI"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_uart_config.h" version="2.0.0">
@@ -607,7 +607,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="UART" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x UART"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="header" name="Include\config\adi_wdt_config.h" version="2.0.0">
@@ -615,7 +615,7 @@
         <component Cclass="Device" Cgroup="Drivers" Csub="WDT" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="source" name="Include\retarget_uart_config.h" version="2.0.0">
@@ -623,7 +623,7 @@
         <component Cclass="Device" Cgroup="Retarget_UART" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x CompilerIO"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="source" condition="ADuCM3029_ARM" name="Source\ARM\startup_ADuCM3029.s" version="2.0.0">
@@ -631,7 +631,7 @@
         <component Cclass="Device" Cgroup="Startup" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
       <file attr="config" category="source" condition="ADuCM3029" name="Source\system_ADuCM3029.c" version="2.0.0">
@@ -639,7 +639,7 @@
         <component Cclass="Device" Cgroup="Startup" Cvendor="AnalogDevices" Cversion="2.0.0" condition="ADuCM302x Driver"/>
         <package license="License/2017-05-17-CM302xEZDFP Click Thru SLA.txt" name="ADuCM302x_DFP" schemaVersion="1.2" supportContact="http://www.analog.com/en/support/technical-support.html" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="2.0.0"/>
         <targetInfos>
-          <targetInfo name="Target 1"/>
+          <targetInfo name="simple"/>
         </targetInfos>
       </file>
     </files>
