@@ -1,41 +1,22 @@
-#include <stdint.h>
-#include <common.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
+/* CRYPTO example include */
+#include "crypto_sha.h"
 
+/* Managed drivers and/or services include */
+#include <drivers/crypto/adi_crypto.h>
+#include <drivers/general/adi_drivers_general.h>    
+#include <assert.h>
+#include <common.h>
 #include <adi_processor.h>
 #include <drivers/pwr/adi_pwr.h>
 #include <drivers/gpio/adi_gpio.h>
 
-/* Crypto Driver includes */
-#include <drivers/crypto/adi_crypto.h>
-
-/* pick up compiler-specific alignment directives */
-#include <drivers/general/adi_drivers_general.h>
-
 #define HZ 1000
 
-/* Enable macro to build example in callback mode */
-#define CRYPTO_ENABLE_CALLBACK
-
-/* CRYPTO Device number */
-#define CRYPTO_DEV_NUM               (0u)
-
-/* SysTick Cycle Count Macros... max 24-bit measure (no wraparound handling) */
-#define CYCLES_INIT {                                                     \
-    /* enable with internal clock and no interrupts */                    \
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk; \
-    SysTick->LOAD = 0x00FFFFFF;}                                     /*!< SysTick instruction count macro */
-#define CYCLES_CLR     {SysTick->VAL = 0;}                           /*!< SysTick instruction count macro */
-#define CYCLES_GET     (0x00ffffff + 1 - SysTick->VAL)               /*!< SysTick instruction count macro */
-#define CYCLES_SUSPEND {SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;}  /*!< SysTick instruction count macro */
-#define CYCLES_RESUME  {SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;}   /*!< SysTick instruction count macro */
-
+/*=============  D A T A  =============*/
 
 /* Memory Required for crypto driver */
-static uint8_t DeviceMemory [ADI_CRYPTO_MEMORY_SIZE] __attribute__((aligned (4)));
+ADI_ALIGNED_PRAGMA(4)
+static uint8_t DeviceMemory          [ADI_CRYPTO_MEMORY_SIZE] ADI_ALIGNED_ATTRIBUTE(4);
 
 /* The SHA test vectors are from http://www.di-mgt.com.au/sha_testvectors.html */
 
@@ -446,6 +427,7 @@ int main(void)
 	uint8_t         gpioMemory[ADI_GPIO_MEMORY_SIZE] = {0};
 	ADI_PWR_RESULT  ePwrResult;
 	ADI_GPIO_RESULT eGpioResult;
+	__IO bool veriRes;
 	
 	ePwrResult = adi_pwr_Init();
 
@@ -470,39 +452,70 @@ int main(void)
 	
 	printf("ADICUP3029 SHA Demo by zhanzr21 for 21ic BBS @ %u Hz\n", SystemCoreClock);
 	
-/* SHA */
-    SHA_Compute();
+	/* SHA */
+	SHA_Compute();
 
-    /* Verify the transfer */
-    if (VerifyBuffers())
-    {
-        printf("All done! Crypto example completed successfully");
-    }
-		
-	/* Loop indefinitely */
-	while (1)  
+	veriRes = VerifyBuffers();
+	
+	printf("%s\n", (veriRes)?"Passed.":"Failed.");
+	
+	/* Verify the transfer */
+	if(veriRes)
 	{
-		adi_gpio_SetHigh(LDS3.Port,  LDS3.Pins);
-		/* Delay between iterations */
-		for (volatile uint32_t i = 0; i < 1000000; i++)
-					;
-		
-		adi_gpio_SetLow(LDS3.Port,  LDS3.Pins);		
-		/* Delay between iterations */
-		for (volatile uint32_t i = 0; i < 1000000; i++)
-					;		
+		//Pass
+		while(1)
+		{
+			adi_gpio_SetHigh (LDS4.Port, LDS4.Pins);
+			/* Delay between iterations */
+			for (volatile uint32_t i = 0; i < 20000; i++)
+						;		
 
-		adi_gpio_SetHigh (LDS4.Port, LDS4.Pins);
-		/* Delay between iterations */
-		for (volatile uint32_t i = 0; i < 500000; i++)
-					;		
-
-		adi_gpio_SetLow (LDS4.Port, LDS4.Pins);
-		/* Delay between iterations */
-		for (volatile uint32_t i = 0; i < 500000; i++)
-					;			
+			adi_gpio_SetLow (LDS4.Port, LDS4.Pins);
+			/* Delay between iterations */
+			for (volatile uint32_t i = 0; i < 200000; i++)
+						;		
+		}
 	}
+	else
+	{
+		//Failed
+		while (1)  
+		{
+			adi_gpio_SetHigh(LDS3.Port,  LDS3.Pins);
+			/* Delay between iterations */
+			for (volatile uint32_t i = 0; i < 1000000; i++)
+						;
+			
+			adi_gpio_SetLow(LDS3.Port,  LDS3.Pins);		
+			/* Delay between iterations */
+			for (volatile uint32_t i = 0; i < 1000000; i++)
+						;			
+		}
+	}
+//    /* test system initialization */
+//    common_Init();
 
+//    if(adi_pwr_Init()!= ADI_PWR_SUCCESS) {
+//        DEBUG_MESSAGE("\n Failed to intialize the power service \n");
+//    }
+
+//    if(ADI_PWR_SUCCESS != adi_pwr_SetClockDivider(ADI_CLOCK_HCLK,1)) {
+//        DEBUG_MESSAGE("Failed to intialize the power service\n");
+//    }
+
+//    if(ADI_PWR_SUCCESS != adi_pwr_SetClockDivider(ADI_CLOCK_PCLK,1))
+//    {
+//        DEBUG_MESSAGE("Failed to intialize the power service\n");
+//    }
+
+//    /* SHA */
+//    SHA_Compute();
+
+//    /* Verify the transfer */
+//    if (VerifyBuffers())
+//    {
+//        DEBUG_MESSAGE("All done! Crypto example completed successfully");
+//    }
 	return 0;
 }
 	
