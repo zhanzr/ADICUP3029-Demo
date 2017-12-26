@@ -1,4 +1,4 @@
 # ADICUP3029-Demo
 Demo for ADICUP3029 board.
 
-SHA hardware accelerator demo.
+SHA256 hardware accelerator demo.
